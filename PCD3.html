@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASCII Art Lyric Video</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: #000;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: monospace;
+        overflow: hidden;
+      }
+
+      #ascii-container {
+        font-family: "Courier New", Courier, monospace;
+        font-size: 10px;
+        line-height: 8px;
+        letter-spacing: 2px;
+        white-space: pre;
+        text-align: center;
+        color: #ffffff;
+        user-select: none;
+      }
+
+      #start-btn {
+        padding: 12px 24px;
+        font-size: 18px;
+        font-weight: bold;
+        background-color: #ffffff;
+        color: #000000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: 0.3s;
+        z-index: 10;
+      }
+
+      #start-btn:hover {
+        background-color: #cccccc;
+      }
+
+      .hide {
+        display: none !important;
+      }
+
+      canvas {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="start-btn">Click to Start ▶</button>
+
+    <!-- Area untuk menampilkan ASCII output -->
+    <pre id="ascii-container"></pre>
+
+    <!-- Audio Element -->
+    <audio id="audio" src="music.mp3"></audio>
+
+    <!-- Hidden Canvas untuk memproses Gambar/Teks -->
+    <canvas id="canvas"></canvas>
+
+    <script>
+      const asciiContainer = document.getElementById("ascii-container");
+      const startBtn = document.getElementById("start-btn");
+      const audio = document.getElementById("audio");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+      // Karakter piksel dari paling gelap ke paling terang
+      const charsFixed = [" ", ".", ":", "-", "=", "+", "*", "%", "@", "#"];
+      const MAX_COLOR_INDEX = 255;
+
+      // Ukuran Canvas ASCII (Resolusi Karakter)
+      const CANVAS_WIDTH = 80;
+      const CANVAS_HEIGHT = 45;
+
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
+
+      // --- Fungsi Utama Render Teks ke ASCII ---
+      function renderTextToAscii(text, fontSize = 12) {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // Support multi-line text (dibagi dengan \n)
+        const lines = text.split("\n");
+        const lineHeight = fontSize + 2;
+        const startY =
+          CANVAS_HEIGHT / 2 - ((lines.length - 1) * lineHeight) / 2;
+
+        lines.forEach((line, index) => {
+          ctx.fillText(line, CANVAS_WIDTH / 2, startY + index * lineHeight);
+        });
+
+        return convertCanvasToAscii();
+      }
+
+      // --- Fungsi Render Gambar ke ASCII ---
+      function renderImageToAscii(imageSrc) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "Anonymous";
+          img.src = imageSrc;
+          img.onload = () => {
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Maintain Aspect Ratio Fit
+            const hRatio = CANVAS_WIDTH / img.width;
+            const vRatio = CANVAS_HEIGHT / img.height;
+            const ratio = Math.min(hRatio, vRatio);
+            const centerShiftX = (CANVAS_WIDTH - img.width * ratio) / 2;
+            const centerShiftY = (CANVAS_HEIGHT - img.height * ratio) / 2;
+
+            ctx.drawImage(
+              img,
+              0,
+              0,
+              img.width,
+              img.height,
+              centerShiftX,
+              centerShiftY,
+              img.width * ratio,
+              img.height * ratio
+            );
+
+            resolve(convertCanvasToAscii());
+          };
+        });
+      }
+
+      // --- Algoritma Konversi ImageData Canvas ke String ASCII ---
+      function convertCanvasToAscii() {
+        const imgData = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        const data = imgData.data;
+        let outputText = "";
+
+        for (let y = 0; y < CANVAS_HEIGHT; y++) {
+          for (let x = 0; x < CANVAS_WIDTH; x++) {
+            const index = (y * CANVAS_WIDTH + x) * 4;
+            const r = data[index];
+            const g = data[index + 1];
+            const b = data[index + 2];
+
+            // Hitung Grayscale / Kecerahan
+            const avg = (r + g + b) / 3;
+            const charIndex = Math.floor(
+              (avg / MAX_COLOR_INDEX) * (charsFixed.length - 1)
+            );
+
+            outputText += charsFixed[charIndex];
+          }
+          outputText += "\n";
+        }
+        return outputText;
+      }
+
+      // --- Timeline Lirik & Foto (Sesuai Video) ---
+      const timeline = [
+        { time: 0, type: "text", content: "About You\nThe 1975", size: 10 },
+        { time: 4, type: "text", content: "I", size: 16 },
+        { time: 6, type: "text", content: "Know A Place", size: 12 },
+        { time: 9, type: "text", content: "It's Somewhere I Go", size: 10 },
+        {
+          time: 11,
+          type: "text",
+          content: "When I Need To\nRemember",
+          size: 9,
+        },
+        { time: 13.5, type: "text", content: "Your Face", size: 14 },
+        { time: 16, type: "text", content: "We Get\nMarried", size: 13 },
+        { time: 18.5, type: "text", content: "In Our Heads", size: 12 },
+        { time: 20.5, type: "text", content: "Something\nTo Do", size: 12 },
+        {
+          time: 22,
+          type: "text",
+          content: "While We Try\nTo Recall",
+          size: 10,
+        },
+        { time: 24, type: "text", content: "How We Met", size: 13 },
+        { time: 25.5, type: "image", content: "photo.jpg" }, // Ganti dengan path foto Anda
+        { time: 30, type: "text", content: "Do You Think\nI Have", size: 11 },
+        { time: 32, type: "text", content: "Forgotten", size: 13 },
+        { time: 33.5, type: "text", content: "About You?", size: 13 },
+        { time: 35.5, type: "image", content: "photo.jpg" },
+      ];
+
+      // --- Kontrol Pemutaran / Loop ---
+      function startSync() {
+        startBtn.classList.add("hide");
+        audio.play();
+
+        setInterval(async () => {
+          const currentTime = audio.currentTime;
+
+          // Cari scene yang cocok dengan timestamp lagu
+          let currentScene = null;
+          for (let i = timeline.length - 1; i >= 0; i--) {
+            if (currentTime >= timeline[i].time) {
+              currentScene = timeline[i];
+              break;
+            }
+          }
+
+          if (currentScene) {
+            if (currentScene.type === "text") {
+              asciiContainer.textContent = renderTextToAscii(
+                currentScene.content,
+                currentScene.size
+              );
+            } else if (currentScene.type === "image") {
+              asciiContainer.textContent = await renderImageToAscii(
+                currentScene.content
+              );
+            }
+          }
+        }, 100);
+      }
+
+      startBtn.addEventListener("click", startSync);
+    </script>
+  </body>
+</html>
